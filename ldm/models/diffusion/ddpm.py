@@ -496,6 +496,13 @@ class LatentDiffusion(DDPM):
             for param in self.model.parameters():
                 param.requires_grad = False
         
+        # if self.unfreeze_model:
+        #     for m in [self.model.diffusion_model.input_blocks]:
+        #         m.train = disabled_train
+        #         for param in m.parameters():
+        #             param.requires_grad = False
+                
+
         self.embedding_manager = None
 
 

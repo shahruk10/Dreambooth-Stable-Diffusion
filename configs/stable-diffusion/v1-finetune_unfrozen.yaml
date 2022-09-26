@@ -19,7 +19,7 @@ model:
     use_ema: False
     embedding_reg_weight: 0.0
     unfreeze_model: True
-    model_lr: 1.0e-6
+    model_lr: 5.0e-6
 
     personalization_config:
       target: ldm.modules.embedding_manager.EmbeddingManager
@@ -44,8 +44,9 @@ model:
         use_spatial_transformer: True
         transformer_depth: 1
         context_dim: 768
-        use_checkpoint: True
+        use_checkpoint: False
         legacy: False
+        use_fp16: False
 
     first_stage_config:
       target: ldm.models.autoencoder.AutoencoderKL
@@ -106,15 +107,16 @@ data:
 lightning:
   modelcheckpoint:
     params:
-      every_n_train_steps: 500
+      every_n_train_steps: 1000
   callbacks:
     image_logger:
       target: main.ImageLogger
       params:
-        batch_frequency: 500
+        batch_frequency: 1000
         max_images: 8
         increase_log_steps: False
 
   trainer:
     benchmark: True
-    max_steps: 3000
+    max_steps: 50000
+    precision: 16

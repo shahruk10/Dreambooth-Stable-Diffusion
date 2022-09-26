@@ -429,7 +429,7 @@ class ImageLogger(Callback):
                 if isinstance(images[k], torch.Tensor):
                     images[k] = images[k].detach().cpu()
                     if self.clamp:
-                        images[k] = torch.clamp(images[k], -1., 1.)
+                        images[k] = torch.clamp(images[k].float(), -1., 1.)
 
             self.log_local(pl_module.logger.save_dir, split, images,
                            pl_module.global_step, pl_module.current_epoch, batch_idx)
@@ -456,12 +456,12 @@ class ImageLogger(Callback):
             self.log_img(pl_module, batch, batch_idx, split="train")
 
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-        if not self.disabled and pl_module.global_step > 0:
-            self.log_img(pl_module, batch, batch_idx, split="val")
-        if hasattr(pl_module, 'calibrate_grad_norm'):
-            if (pl_module.calibrate_grad_norm and batch_idx % 25 == 0) and batch_idx > 0:
-                self.log_gradients(trainer, pl_module, batch_idx=batch_idx)
-
+        # if not self.disabled and pl_module.global_step > 0:
+        #     self.log_img(pl_module, batch, batch_idx, split="val")
+        # if hasattr(pl_module, 'calibrate_grad_norm'):
+        #     if (pl_module.calibrate_grad_norm and batch_idx % 25 == 0) and batch_idx > 0:
+        #         self.log_gradients(trainer, pl_module, batch_idx=batch_idx)
+        pass
 
 class CUDACallback(Callback):
     # see https://github.com/SeanNaren/minGPT/blob/master/mingpt/callback.py
@@ -607,8 +607,8 @@ if __name__ == "__main__":
         lightning_config = config.pop("lightning", OmegaConf.create())
         # merge trainer cli with config
         trainer_config = lightning_config.get("trainer", OmegaConf.create())
-        # default to ddp
-        trainer_config["accelerator"] = "ddp"
+        # default to gpu
+        trainer_config["accelerator"] = "gpu"
         for k in nondefault_trainer_args(opt):
             trainer_config[k] = getattr(opt, k)
         if not "gpus" in trainer_config:
@@ -825,14 +825,15 @@ if __name__ == "__main__":
         signal.signal(signal.SIGUSR2, divein)
 
         # run
-        if opt.train:
-            try:
-                trainer.fit(model, data)
-            except Exception:
-                melk()
-                raise
-        if not opt.no_test and not trainer.interrupted:
-            trainer.test(model, data)
+        with torch.autocast(device_type='cuda'):
+            if opt.train:
+                try:
+                    trainer.fit(model, data)
+                except Exception:
+                    melk()
+                    raise
+            if not opt.no_test and not trainer.interrupted:
+                trainer.test(model, data)
     except Exception:
         if opt.debug and trainer.global_rank == 0:
             try:
